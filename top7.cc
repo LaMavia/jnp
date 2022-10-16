@@ -207,6 +207,33 @@ auto comparison_of_placings(placing &previous_placing, placing &current_placing)
   return output;
 }
 
+auto sum_up_votes(point_counter& running_total_votes, point_counter& current_round_votes) -> point_counter& {
+  for (auto const& [song_id, votes] : current_round_votes) {
+    if (!running_total_votes.contains(song_id)) {
+      running_total_votes[song_id] = 0;
+    }
+
+    running_total_votes[song_id] += votes;
+  }
+
+  return running_total_votes;
+}
+
+auto eliminated_of_placings(placing &previous_placing, placing &current_placing)
+    -> unordered_set<uint64_t> {
+  unordered_set<uint64_t> output{};
+
+  // song_id in previous_placing ∧ song_id not in current_placing => eliminated
+  for (auto const &song_id : previous_placing) {
+    if (find(current_placing.begin(), current_placing.end(), song_id) ==
+        current_placing.end()) {
+      output.insert(song_id);
+    }
+  }
+
+  return output;
+}
+
 auto main() -> int {
   point_counter votes{{1, 3}, {2, 5}, {3, 1}, {4, 3},
                       {5, 1}, {6, 7}, {7, 1}, {8, 4}};
@@ -231,10 +258,15 @@ auto main() -> int {
 
   comparison c = comparison_of_placings(pl, pl2);
 
-  cout << "comparison: \n";
+  cout << "\ncomparison: \n";
   for (size_t i = 0; i < c.size(); i++) {
     auto const &[song_id, d_pos] = c[i];
     std::cout << i + 1 << ". " << song_id << " " << d_pos << "\n";
+  }
+
+  cout << "\neliminated songs:\n";
+  for (auto const& song_id : eliminated_of_placings(pl, pl2)) {
+    cout << song_id << "\n";
   }
 
   // string line;
@@ -278,18 +310,19 @@ auto main() -> int {
 
   //       # calculating top
   //       last_top_placing <- current_top_placing
-  //       running_total_votes := sum_up_votes(running_total_votes,
-  //       current_round_votes) current_top_placing :=
-  //       placing_of_votes(running_total_votes)
+  //       running_total_votes := sum_up_votes(running_total_votes, current_round_votes) 
+  //         :: sum_up_votes(point_counter&, point_counter&) -> point_counter& # = &0
+  //       current_top_placing := placing_of_votes(running_total_votes)
 
   //       top_comparison := comparison_of_placings(last_top_placing,
   //       current_top_placing)
 
   //       # szykowanie nowych głosów
-  //       eliminated_songs := eliminated_of_placings(last_round_placing,
-  //       current_round_placing) current_round_votes :=
-  //       extend_votes(current_round_votes, max, new_max) current_round_votes
-  //       := filter_eliminated(current_round_votes, eliminated_songs)
+  //       eliminated_songs := eliminated_of_placings(last_round_placing, current_round_placing) 
+  //         :: eliminated_of_placings(placing&, placing&) -> unordered_set<song_id>
+  //       current_round_votes := extend_votes(current_round_votes, max, new_max) 
+  //         :: extend_votes(point_counter&, uint64_t, uint64_t) -> point_counter& # = &0
+  //       current_round_votes := filter_eliminated(current_round_votes, eliminated_songs)
 
   //       print_comparison(round_comparison)
   //     */
