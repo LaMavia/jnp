@@ -221,6 +221,9 @@ auto main() -> int {
   placing current_round_placing{};
   placing last_round_placing{};
 
+  placing current_top_placing{};
+  placing last_top_placing{};
+
   comparison_result round_comparison{};
   comparison_result top_comparison{};
 
@@ -238,7 +241,25 @@ auto main() -> int {
       }
 
       /*
-        
+        # zamykanie rundy
+        last_round_placing <- current_round_placing # move
+        current_round_placing := placing_of_votes(current_round_point_votes);
+
+        round_comparison := comparison_of_placings(last_round_placing, current_round_placing)
+
+        # calculating top
+        last_top_placing <- current_top_placing
+        running_total_votes := sum_up_votes(running_total_votes, current_round_votes)
+        current_top_placing := placing_of_votes(running_total_votes)
+
+        top_comparison := comparison_of_placings(last_top_placing, current_top_placing)
+
+        # szykowanie nowych głosów
+        eliminated_songs := eliminated_of_placings(last_round_placing, current_round_placing)
+        current_round_votes := extend_votes(current_round_votes, max, new_max)
+        current_round_votes := filter_eliminated(current_round_votes, eliminated_songs)
+
+        print_comparison(round_comparison)
       */
 
     } break;
