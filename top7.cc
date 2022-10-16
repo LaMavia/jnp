@@ -162,6 +162,10 @@ auto placing_of_votes(point_counter &votes) -> placing {
   set<pair<uint64_t, uint64_t>, decltype(placing_cmp)> intermediate_placing{};
 
   for (auto const &entry : votes) {
+    if (entry.second == 0) {
+      continue;
+    }
+    
     if (intermediate_placing.size() < 7) {
       intermediate_placing.insert(entry);
     } else {
@@ -207,8 +211,9 @@ auto comparison_of_placings(placing &previous_placing, placing &current_placing)
   return output;
 }
 
-auto sum_up_votes(point_counter& running_total_votes, point_counter& current_round_votes) -> point_counter& {
-  for (auto const& [song_id, votes] : current_round_votes) {
+auto sum_up_votes(point_counter &running_total_votes,
+                  point_counter &current_round_votes) -> point_counter & {
+  for (auto const &[song_id, votes] : current_round_votes) {
     if (!running_total_votes.contains(song_id)) {
       running_total_votes[song_id] = 0;
     }
@@ -261,135 +266,168 @@ auto clear_votes(point_counter &current_round_votes) -> point_counter & {
   return current_round_votes;
 }
 
+auto print_comparison(comparison &comp) -> void {
+  for (auto const &[song_id, d_pos] : comp) {
+    cout << song_id << " " << d_pos << "\n";
+  }
+}
+
 auto main() -> int {
-  point_counter votes{{1, 3}, {2, 5}, {3, 1}, {4, 3},
-                      {5, 1}, {6, 7}, {7, 1}, {8, 4}};
+  // point_counter votes{{1, 3}, {2, 5}, {3, 1}, {4, 3},
+  //                     {5, 1}, {6, 7}, {7, 1}, {8, 4}};
 
-  point_counter votes2{{1, 9}, {2, 5}, {3, 1}, {4, 3}, {5, 1},
-                       {6, 7}, {7, 1}, {8, 4}, {9, 10}};
+  // point_counter votes2{{1, 9}, {2, 5}, {3, 1}, {4, 3}, {5, 1},
+  //                      {6, 7}, {7, 1}, {8, 4}, {9, 10}};
 
-  placing pl = placing_of_votes(votes);
-  placing pl2 = placing_of_votes(votes2);
+  // placing pl = placing_of_votes(votes);
+  // placing pl2 = placing_of_votes(votes2);
 
-  cout << "placing 1:\n";
-  for (size_t i = 0; i < pl.size(); i++) {
-    auto const song_id = pl[i];
-    std::cout << i + 1 << ". " << song_id << "\n";
-  }
-
-  cout << "\nplacing 2:\n";
-  for (size_t i = 0; i < pl2.size(); i++) {
-    auto const song_id = pl2[i];
-    std::cout << i + 1 << ". " << song_id << "\n";
-  }
-
-  comparison c = comparison_of_placings(pl, pl2);
-
-  cout << "\ncomparison: \n";
-  for (size_t i = 0; i < c.size(); i++) {
-    auto const &[song_id, d_pos] = c[i];
-    std::cout << i + 1 << ". " << song_id << " " << d_pos << "\n";
-  }
-
-  cout << "\neliminated songs:\n";
-  for (auto const& song_id : eliminated_of_placings(pl, pl2)) {
-    cout << song_id << "\n";
-  }
-
-  // string line;
-  // size_t max_key = 0;
-  // size_t line_number = 0;
-
-  // point_counter current_round_votes{};
-  // point_counter running_total_votes{};
-
-  // placing current_round_placing{};
-  // placing last_round_placing{};
-
-  // placing current_top_placing{};
-  // placing last_top_placing{};
-
-  // comparison_result round_comparison{};
-  // comparison_result top_comparison{};
-
-  // while (getline(cin, line)) {
-  //   line_number++;
-  //   instruction_type lineType = instruction_type_of_line(line);
-
-  //   switch (lineType) {
-  //   case instruction_type::max: {
-  //     auto const &[valid, new_max_key] = parse_max(max_key, line);
-
-  //     if (!valid) {
-  //       printLineError(line, line_number);
-  //       continue;
-  //     }
-
-  //     /*
-  //       # zamykanie rundy
-  //       last_round_placing <- current_round_placing # move
-  //       current_round_placing := placing_of_votes(current_round_point_votes);
-  //         :: placing_of_votes(point_counter&) -> placing
-
-  //       round_comparison := comparison_of_placings(last_round_placing,
-  //       current_round_placing)
-  //         :: comparison_of_placings(placing&, placing&) -> comparison
-
-  //       # calculating top
-  //       last_top_placing <- current_top_placing
-  //       running_total_votes := sum_up_votes(running_total_votes, current_round_votes) 
-  //         :: sum_up_votes(point_counter&, point_counter&) -> point_counter& # = &0
-  //       current_top_placing := placing_of_votes(running_total_votes)
-
-  //       top_comparison := comparison_of_placings(last_top_placing,
-  //       current_top_placing)
-
-  //       # szykowanie nowych głosów
-  //       eliminated_songs := eliminated_of_placings(last_round_placing, current_round_placing) 
-  //         :: eliminated_of_placings(placing&, placing&) -> unordered_set<song_id>
-  //       current_round_votes := extend_votes(current_round_votes, max, new_max) 
-  //         :: extend_votes(point_counter&, uint64_t, uint64_t) -> point_counter& # = &0
-  //       current_round_votes := filter_eliminated_songs(current_round_votes, eliminated_songs)
-  //         :: filter_eliminated_songs(point_counter&, unordered_set<song_id>&) -> point_counter&
-  //       current_round_votes := clear_votes(current_round_votes)
-
-  //       print_comparison(round_comparison)
-  //     */
-
-  //   } break;
-  //   case instruction_type::top: {
-  //     // nic do sprawdzania, bo regexp validuje.
-
-  //   } break;
-  //   case instruction_type::vote: {
-  //     auto const &[valid, parsed_votes] =
-  //         parseVote(current_round_votes, max_key, line);
-
-  //     if (!valid) {
-  //       printLineError(line, line_number);
-  //       continue;
-  //     }
-
-  //     for (auto vote_song_id : parsed_votes) {
-  //       current_round_votes[vote_song_id] += 1;
-  //     }
-  //   } break;
-  //   case instruction_type::empty: {
-  //   } break;
-  //   case instruction_type::unknown: {
-  //     printLineError(line, line_number);
-  //     continue;
-  //   } break;
-  //   default: {
-  //     cerr << "Unknown instruction: " << line << "(" << lineType << ")\n";
-  //     return 1;
-  //   } break;
-  //   }
-
-  //   printf("max_key: %lu, instruction: %d, line: %s\n", max_key, lineType,
-  //          line.c_str());
-  //   // printStore(voteStores.second);
+  // cout << "placing 1:\n";
+  // for (size_t i = 0; i < pl.size(); i++) {
+  //   auto const song_id = pl[i];
+  //   std::cout << i + 1 << ". " << song_id << "\n";
   // }
+
+  // cout << "\nplacing 2:\n";
+  // for (size_t i = 0; i < pl2.size(); i++) {
+  //   auto const song_id = pl2[i];
+  //   std::cout << i + 1 << ". " << song_id << "\n";
+  // }
+
+  // comparison c = comparison_of_placings(pl, pl2);
+
+  // cout << "\ncomparison: \n";
+  // for (size_t i = 0; i < c.size(); i++) {
+  //   auto const &[song_id, d_pos] = c[i];
+  //   std::cout << i + 1 << ". " << song_id << " " << d_pos << "\n";
+  // }
+
+  // cout << "\neliminated songs:\n";
+  // for (auto const& song_id : eliminated_of_placings(pl, pl2)) {
+  //   cout << song_id << "\n";
+  // }
+
+  string line;
+  size_t max_key = 0;
+  size_t line_number = 0;
+
+  point_counter current_round_votes{};
+  point_counter running_total_votes{};
+
+  placing current_round_placing{};
+  placing last_round_placing{};
+
+  placing current_top_placing{};
+  placing last_top_placing{};
+
+  comparison round_comparison{};
+  comparison top_comparison{};
+
+  while (getline(cin, line)) {
+    line_number++;
+    instruction_type lineType = instruction_type_of_line(line);
+
+    switch (lineType) {
+    case instruction_type::max: {
+      auto const &[valid, new_max_key] = parse_max(max_key, line);
+
+      if (!valid) {
+        printLineError(line, line_number);
+        continue;
+      }
+
+      // zamykanie rundy
+      last_round_placing = move(current_round_placing);
+      current_round_placing = placing_of_votes(current_round_votes);
+
+      round_comparison = comparison_of_placings(last_round_placing, current_round_placing);
+
+      // calculating top
+      last_top_placing = move(current_top_placing);
+      running_total_votes = sum_up_votes(running_total_votes, current_round_votes);
+      current_top_placing = placing_of_votes(running_total_votes);
+
+      top_comparison = comparison_of_placings(last_top_placing, current_top_placing);
+
+      // szykowanie nowych głosów
+      auto eliminated_songs = eliminated_of_placings(last_round_placing, current_round_placing);
+      current_round_votes = extend_votes(current_round_votes, max_key, new_max_key);
+      current_round_votes = filter_eliminated_songs(current_round_votes, eliminated_songs);
+      current_round_votes = clear_votes(current_round_votes);
+
+      max_key = new_max_key;
+
+      print_comparison(round_comparison);
+
+
+      /*
+        # zamykanie rundy
+        last_round_placing <- current_round_placing # move
+        current_round_placing := placing_of_votes(current_round_point_votes);
+          :: placing_of_votes(point_counter&) -> placing
+
+        round_comparison := comparison_of_placings(last_round_placing,
+        current_round_placing)
+          :: comparison_of_placings(placing&, placing&) -> comparison
+
+        # calculating top
+        last_top_placing <- current_top_placing
+        running_total_votes := sum_up_votes(running_total_votes,
+        current_round_votes)
+          :: sum_up_votes(point_counter&, point_counter&) -> point_counter& # = &0 
+        current_top_placing := placing_of_votes(running_total_votes)
+
+        top_comparison := comparison_of_placings(last_top_placing,
+        current_top_placing)
+
+        # szykowanie nowych głosów
+        eliminated_songs := eliminated_of_placings(last_round_placing,
+        current_round_placing)
+          :: eliminated_of_placings(placing&, placing&) ->
+        unordered_set<song_id> 
+        current_round_votes := extend_votes(current_round_votes, max, new_max)
+          :: extend_votes(point_counter&, uint64_t, uint64_t) -> point_counter& # = &0 
+        current_round_votes := filter_eliminated_songs(current_round_votes, eliminated_songs)
+          :: filter_eliminated_songs(point_counter&, unordered_set<song_id>&) -> point_counter& 
+        current_round_votes := clear_votes(current_round_votes)
+
+        print_comparison(round_comparison)
+      */
+
+    } break;
+    case instruction_type::top: {
+      // nic do sprawdzania, bo regexp validuje.
+
+    } break;
+    case instruction_type::vote: {
+      auto const &[valid, parsed_votes] =
+          parseVote(current_round_votes, max_key, line);
+
+      if (!valid) {
+        printLineError(line, line_number);
+        continue;
+      }
+
+      for (auto vote_song_id : parsed_votes) {
+        current_round_votes[vote_song_id] += 1;
+      }
+    } break;
+    case instruction_type::empty: {
+    } break;
+    case instruction_type::unknown: {
+      printLineError(line, line_number);
+      continue;
+    } break;
+    default: {
+      cerr << "Unknown instruction: " << line << "(" << lineType << ")\n";
+      return 1;
+    } break;
+    }
+
+    printf("max_key: %lu, instruction: %d, line: %s\n", max_key, lineType,
+           line.c_str());
+    // printStore(voteStores.second);
+  }
 
   return 0;
 }
