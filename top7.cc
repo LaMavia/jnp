@@ -83,7 +83,7 @@ enum instruction_type { top = 1, max = 2, vote = 3, empty = 4, unknown = 0 };
 
 auto instruction_type_of_line(string &line) -> instruction_type {
   const static map<instruction_type, regex> cases{
-      {instruction_type::max, regex(R"(^MAX\s+\d+)")},
+      {instruction_type::max, regex(R"(^NEW\s+\d+)")},
       {instruction_type::top, regex(R"(^TOP$)")},
       {instruction_type::vote, regex(R"(^([1-9]\d*\s*)+$)")},
       {instruction_type::empty, regex(R"(^\s*$)")}};
@@ -165,7 +165,7 @@ auto placing_of_votes(point_counter &votes) -> placing {
     if (entry.second == 0) {
       continue;
     }
-    
+
     if (intermediate_placing.size() < 7) {
       intermediate_placing.insert(entry);
     } else {
@@ -211,17 +211,16 @@ auto comparison_of_placings(placing &previous_placing, placing &current_placing)
   return output;
 }
 
-auto sum_up_votes(point_counter &running_total_votes,
-                  point_counter &current_round_votes) -> point_counter & {
-  for (auto const &[song_id, votes] : current_round_votes) {
-    if (!running_total_votes.contains(song_id)) {
-      running_total_votes[song_id] = 0;
-    }
+auto add_top_placing_votes(point_counter &top_placing_votes,
+                           placing &current_round_placing) -> point_counter & {
+  for (uint64_t i = 0; i < current_round_placing.size(); i++) {
+    auto points = 7 - i;
+    auto song_id = current_round_placing[i];
 
-    running_total_votes[song_id] += votes;
+    top_placing_votes[song_id] += points;
   }
 
-  return running_total_votes;
+  return top_placing_votes;
 }
 
 auto eliminated_of_placings(placing &previous_placing, placing &current_placing)
@@ -312,7 +311,7 @@ auto main() -> int {
   size_t line_number = 0;
 
   point_counter current_round_votes{};
-  point_counter running_total_votes{};
+  point_counter top_placing_votes{};
 
   placing current_round_placing{};
   placing last_round_placing{};
@@ -340,63 +339,35 @@ auto main() -> int {
       last_round_placing = move(current_round_placing);
       current_round_placing = placing_of_votes(current_round_votes);
 
-      round_comparison = comparison_of_placings(last_round_placing, current_round_placing);
+      round_comparison =
+          comparison_of_placings(last_round_placing, current_round_placing);
 
       // calculating top
       last_top_placing = move(current_top_placing);
-      running_total_votes = sum_up_votes(running_total_votes, current_round_votes);
-      current_top_placing = placing_of_votes(running_total_votes);
+      // dodawaj punkty za pozycję w placingu, nie running total
+      top_placing_votes =
+          add_top_placing_votes(top_placing_votes, current_round_placing);
+      current_top_placing = placing_of_votes(top_placing_votes);
 
-      top_comparison = comparison_of_placings(last_top_placing, current_top_placing);
+      top_comparison =
+          comparison_of_placings(last_top_placing, current_top_placing);
 
       // szykowanie nowych głosów
-      auto eliminated_songs = eliminated_of_placings(last_round_placing, current_round_placing);
-      current_round_votes = extend_votes(current_round_votes, max_key, new_max_key);
-      current_round_votes = filter_eliminated_songs(current_round_votes, eliminated_songs);
+      auto eliminated_songs =
+          eliminated_of_placings(last_round_placing, current_round_placing);
+      current_round_votes =
+          extend_votes(current_round_votes, max_key, new_max_key);
+      current_round_votes =
+          filter_eliminated_songs(current_round_votes, eliminated_songs);
       current_round_votes = clear_votes(current_round_votes);
 
       max_key = new_max_key;
 
       print_comparison(round_comparison);
-
-
-      /*
-        # zamykanie rundy
-        last_round_placing <- current_round_placing # move
-        current_round_placing := placing_of_votes(current_round_point_votes);
-          :: placing_of_votes(point_counter&) -> placing
-
-        round_comparison := comparison_of_placings(last_round_placing,
-        current_round_placing)
-          :: comparison_of_placings(placing&, placing&) -> comparison
-
-        # calculating top
-        last_top_placing <- current_top_placing
-        running_total_votes := sum_up_votes(running_total_votes,
-        current_round_votes)
-          :: sum_up_votes(point_counter&, point_counter&) -> point_counter& # = &0 
-        current_top_placing := placing_of_votes(running_total_votes)
-
-        top_comparison := comparison_of_placings(last_top_placing,
-        current_top_placing)
-
-        # szykowanie nowych głosów
-        eliminated_songs := eliminated_of_placings(last_round_placing,
-        current_round_placing)
-          :: eliminated_of_placings(placing&, placing&) ->
-        unordered_set<song_id> 
-        current_round_votes := extend_votes(current_round_votes, max, new_max)
-          :: extend_votes(point_counter&, uint64_t, uint64_t) -> point_counter& # = &0 
-        current_round_votes := filter_eliminated_songs(current_round_votes, eliminated_songs)
-          :: filter_eliminated_songs(point_counter&, unordered_set<song_id>&) -> point_counter& 
-        current_round_votes := clear_votes(current_round_votes)
-
-        print_comparison(round_comparison)
-      */
-
     } break;
     case instruction_type::top: {
       // nic do sprawdzania, bo regexp validuje.
+      print_comparison(top_comparison);
 
     } break;
     case instruction_type::vote: {
@@ -424,8 +395,8 @@ auto main() -> int {
     } break;
     }
 
-    printf("max_key: %lu, instruction: %d, line: %s\n", max_key, lineType,
-           line.c_str());
+    // printf("max_key: %lu, instruction: %d, line: %s\n", max_key, lineType,
+    //        line.c_str());
     // printStore(voteStores.second);
   }
 
