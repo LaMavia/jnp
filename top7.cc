@@ -49,9 +49,9 @@ template <typename T> auto expire(cached<T> &trunk) -> void {
 
 } // namespace cached
 
-using point_counter = unordered_map<uint64_t, uint64_t>;   // (1)
-using placing = vector<uint64_t>;                          // (2)
-using comparison_result = vector<pair<uint64_t, int64_t>>; // (3)
+using point_counter = unordered_map<uint64_t, uint64_t>; // (1)
+using placing = vector<uint64_t>;                        // (2)
+using comparison = vector<pair<uint64_t, string>>;       // (3)
 
 enum instruction_type { top = 1, max = 2, vote = 3, empty = 4, unknown = 0 };
 
@@ -71,7 +71,7 @@ enum instruction_type { top = 1, max = 2, vote = 3, empty = 4, unknown = 0 };
   3. something to compare the round ups:
     - set order, sortability would be nice
     - printable
-    :: vector<pair<song_id, ~d_pos: int64_t>> # -7 < d_pos < 7, so '-' ~ 7
+    :: vector<pair<song_id, ~d_pos: string>>
   4. something to store running points
     >> wild guess:
       za placement w podsumowaniu rundy dostajemy punkty.
@@ -182,15 +182,59 @@ auto placing_of_votes(point_counter &votes) -> placing {
   return output;
 }
 
+auto comparison_of_placings(placing &previous_placing, placing &current_placing)
+    -> comparison {
+  comparison output{};
+
+  for (uint64_t i = 0; i < current_placing.size(); i++) {
+    auto song_id = current_placing[i];
+    int64_t current_position = i + 1;
+
+    auto previous_position_it =
+        find(previous_placing.begin(), previous_placing.end(), song_id);
+
+    if (previous_position_it == previous_placing.end()) {
+      output.push_back({song_id, "-"});
+    } else {
+      int64_t previous_position =
+          previous_position_it - previous_placing.begin() + 1;
+
+      output.push_back(
+          {song_id, to_string(previous_position - current_position)});
+    }
+  }
+
+  return output;
+}
+
 auto main() -> int {
   point_counter votes{{1, 3}, {2, 5}, {3, 1}, {4, 3},
                       {5, 1}, {6, 7}, {7, 1}, {8, 4}};
 
-  placing pl = placing_of_votes(votes);
+  point_counter votes2{{1, 9}, {2, 5}, {3, 1}, {4, 3}, {5, 1},
+                       {6, 7}, {7, 1}, {8, 4}, {9, 10}};
 
+  placing pl = placing_of_votes(votes);
+  placing pl2 = placing_of_votes(votes2);
+
+  cout << "placing 1:\n";
   for (size_t i = 0; i < pl.size(); i++) {
     auto const song_id = pl[i];
     std::cout << i + 1 << ". " << song_id << "\n";
+  }
+
+  cout << "\nplacing 2:\n";
+  for (size_t i = 0; i < pl2.size(); i++) {
+    auto const song_id = pl2[i];
+    std::cout << i + 1 << ". " << song_id << "\n";
+  }
+
+  comparison c = comparison_of_placings(pl, pl2);
+
+  cout << "comparison: \n";
+  for (size_t i = 0; i < c.size(); i++) {
+    auto const &[song_id, d_pos] = c[i];
+    std::cout << i + 1 << ". " << song_id << " " << d_pos << "\n";
   }
 
   // string line;
@@ -226,12 +270,11 @@ auto main() -> int {
   //       # zamykanie rundy
   //       last_round_placing <- current_round_placing # move
   //       current_round_placing := placing_of_votes(current_round_point_votes);
-  //         :: placing_of_votes(point_counter) -> placing {
-
-  //         }
+  //         :: placing_of_votes(point_counter&) -> placing
 
   //       round_comparison := comparison_of_placings(last_round_placing,
   //       current_round_placing)
+  //         :: comparison_of_placings(placing&, placing&) -> comparison
 
   //       # calculating top
   //       last_top_placing <- current_top_placing
