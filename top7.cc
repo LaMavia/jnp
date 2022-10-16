@@ -234,6 +234,33 @@ auto eliminated_of_placings(placing &previous_placing, placing &current_placing)
   return output;
 }
 
+auto extend_votes(point_counter &current_round_votes, uint64_t old_max,
+                  uint64_t new_max) -> point_counter & {
+  for (uint64_t song_id = old_max + 1; song_id <= new_max; song_id++) {
+    current_round_votes[song_id] = 0;
+  }
+
+  return current_round_votes;
+}
+
+auto filter_eliminated_songs(point_counter &current_round_votes,
+                             unordered_set<uint64_t> &eliminated_songs)
+    -> point_counter & {
+  for (auto const &song_id : eliminated_songs) {
+    current_round_votes.erase(song_id);
+  }
+
+  return current_round_votes;
+}
+
+auto clear_votes(point_counter &current_round_votes) -> point_counter & {
+  for (auto const &[song_id, _] : current_round_votes) {
+    current_round_votes[song_id] = 0;
+  }
+
+  return current_round_votes;
+}
+
 auto main() -> int {
   point_counter votes{{1, 3}, {2, 5}, {3, 1}, {4, 3},
                       {5, 1}, {6, 7}, {7, 1}, {8, 4}};
@@ -322,7 +349,9 @@ auto main() -> int {
   //         :: eliminated_of_placings(placing&, placing&) -> unordered_set<song_id>
   //       current_round_votes := extend_votes(current_round_votes, max, new_max) 
   //         :: extend_votes(point_counter&, uint64_t, uint64_t) -> point_counter& # = &0
-  //       current_round_votes := filter_eliminated(current_round_votes, eliminated_songs)
+  //       current_round_votes := filter_eliminated_songs(current_round_votes, eliminated_songs)
+  //         :: filter_eliminated_songs(point_counter&, unordered_set<song_id>&) -> point_counter&
+  //       current_round_votes := clear_votes(current_round_votes)
 
   //       print_comparison(round_comparison)
   //     */
