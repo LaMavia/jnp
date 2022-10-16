@@ -152,8 +152,9 @@ auto printLineError(string &line, size_t lineNumber) -> void {
 // T = O(n log(7)) = O(n)
 // M = O(7) = O(1)
 auto placing_of_votes(point_counter &votes) -> placing {
-  static auto placing_cmp = [](pair<uint64_t, uint64_t> a,
-                               pair<uint64_t, uint64_t> b) -> bool {
+  // a > b
+  static auto placing_cmp = [](const pair<uint64_t, uint64_t> a,
+                               const pair<uint64_t, uint64_t> b) -> bool {
     return a.second > b.second || (a.second == b.second && a.first < b.first);
   };
 
@@ -164,9 +165,9 @@ auto placing_of_votes(point_counter &votes) -> placing {
     if (intermediate_placing.size() < 7) {
       intermediate_placing.insert(entry);
     } else {
-      auto min_entry = *intermediate_placing.lower_bound({0, 0});
+      auto min_entry = *intermediate_placing.rbegin();
 
-      if (intermediate_placing.key_comp()(entry, min_entry)) {
+      if (placing_cmp(entry, min_entry)) { // entry > min_entry
         intermediate_placing.erase(min_entry);
         intermediate_placing.insert(entry);
       }
@@ -182,7 +183,8 @@ auto placing_of_votes(point_counter &votes) -> placing {
 }
 
 auto main() -> int {
-  point_counter votes{{1, 3}, {2, 5}, {3, 1}, {4, 3}};
+  point_counter votes{{1, 3}, {2, 5}, {3, 1}, {4, 3},
+                      {5, 1}, {6, 7}, {7, 1}, {8, 4}};
 
   placing pl = placing_of_votes(votes);
 
