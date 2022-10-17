@@ -62,20 +62,20 @@ auto instruction_type_of_line(string &line) -> instruction_type {
 
 // Parsers
 
-auto parseVote(point_counter &currentVotes, size_t max_key, string &line)
+auto parse_vote(point_counter &current_votes, size_t max_key, string &line)
     -> pair<bool, unordered_set<uint64_t>> {
   unordered_set<uint64_t> votes{};
-  stringstream lineStream(line);
+  stringstream line_stream(line);
   bool valid = true;
 
   uint64_t vote;
 
-  while (lineStream >> vote) {
-    if (!currentVotes.contains(vote) || vote == 0 || vote > max_key ||
+  while (line_stream >> vote) {
+    if (!current_votes.contains(vote) || vote == 0 || vote > max_key ||
         votes.contains(vote)) {
       valid = false;
       break;
-    } 
+    }
 
     votes.insert(vote);
   }
@@ -84,33 +84,30 @@ auto parseVote(point_counter &currentVotes, size_t max_key, string &line)
 }
 
 auto parse_max(uint64_t max_key, string &line) -> pair<bool, uint64_t> {
-  stringstream lineStream(line);
+  stringstream line_stream(line);
   bool valid = true;
 
   int64_t new_max_key;
 
   // ignore leading whitespaces
-  while (isspace(lineStream.peek())) {
-    lineStream.ignore(1);
+  while (isspace(line_stream.peek())) {
+    line_stream.ignore(1);
   }
 
-  // ignore "MAX "
-  lineStream.ignore(((sizeof(char)) * 4), ' ');
+  // ignore "NEW "
+  line_stream.ignore(((sizeof(char)) * 4), ' ');
 
-  valid = !!(lineStream >> new_max_key) && (new_max_key >= (int64_t)max_key) && (new_max_key <= 99999999) && (new_max_key >= 1);
+  valid = !!(line_stream >> new_max_key) && (new_max_key >= (int64_t)max_key) &&
+          (new_max_key <= 99999999) && (new_max_key >= 1);
 
   return {valid, new_max_key};
 }
 
 // end: parsers
 
-// start: printers
-
-auto printLineError(string &line, size_t lineNumber) -> void {
-  cerr << "Error in line " << lineNumber << ": " << line << "\n";
+auto print_line_error(string &line, size_t line_number) -> void {
+  cerr << "Error in line " << line_number << ": " << line << "\n";
 }
-
-// end: printers
 
 // T = O(n log(7)) = O(n)
 // M = O(7) = O(1)
@@ -260,7 +257,7 @@ auto main() -> int {
         auto const &[valid, new_max_key] = parse_max(max_key, line);
 
         if (!valid) {
-          printLineError(line, line_number);
+          print_line_error(line, line_number);
           continue;
         }
 
@@ -271,7 +268,7 @@ auto main() -> int {
         round_comparison =
             comparison_of_placings(last_round_placing, current_round_placing);
 
-        // calculating top
+        // addinng placement votes
         top_placing_votes =
             add_top_placing_votes(top_placing_votes, current_round_placing);
 
@@ -301,10 +298,10 @@ auto main() -> int {
       } break;
       case instruction_type::vote: {
         auto const &[valid, parsed_votes] =
-            parseVote(current_round_votes, max_key, line);
+            parse_vote(current_round_votes, max_key, line);
 
         if (!valid) {
-          printLineError(line, line_number);
+          print_line_error(line, line_number);
           continue;
         }
 
@@ -315,7 +312,7 @@ auto main() -> int {
       case instruction_type::empty: {
       } break;
       case instruction_type::unknown: {
-        printLineError(line, line_number);
+        print_line_error(line, line_number);
         continue;
       } break;
       default: {
