@@ -12,46 +12,9 @@
 
 using namespace std;
 
-/**
- * hipotezy:
- * 1. nie przynależenie do 7-ki nie wpływa na wyrzucanie
- * 2. wypada, jeśli kiedykolwiek dostało głos, a nie dostało w ostatnim. (p ->
- * q)
- *
- * dict[int,
- *      (~głosy_w_obecnym: int,
- *       ~pozycja_w_poprzednim: int [0: nigdy nie głosowane]
- *      )
- *     ]
- *
- */
-
-namespace cached {
-
-template <typename T> using cached = pair<bool, T>;
-
-template <typename T> auto val(cached<T> &trunk) -> T & { return trunk.second; }
-
-template <typename T> auto has_expired(cached<T> &trunk) -> bool {
-  return trunk.first;
-}
-
-template <typename T> auto set(cached<T> &trunk, T &&new_value) -> cached<T> {
-  trunk.second = new_value;
-  trunk.first = true;
-
-  return trunk;
-}
-
-template <typename T> auto expire(cached<T> &trunk) -> void {
-  trunk.first = false;
-}
-
-} // namespace cached
-
-using point_counter = unordered_map<uint64_t, uint64_t>; // (1)
-using placing = vector<uint64_t>;                        // (2)
-using comparison = vector<pair<uint64_t, string>>;       // (3)
+using point_counter = unordered_map<uint64_t, uint64_t>;  // (1)
+using placing = vector<uint64_t>;                         // (2)
+using comparison = vector<pair<uint64_t, string>>;        // (3)
 
 enum instruction_type { top = 1, max = 2, vote = 3, empty = 4, unknown = 0 };
 
@@ -171,7 +134,7 @@ auto placing_of_votes(point_counter &votes) -> placing {
     } else {
       auto min_entry = *intermediate_placing.rbegin();
 
-      if (placing_cmp(entry, min_entry)) { // entry > min_entry
+      if (placing_cmp(entry, min_entry)) {  // entry > min_entry
         intermediate_placing.erase(min_entry);
         intermediate_placing.insert(entry);
       }
@@ -272,40 +235,6 @@ auto print_comparison(comparison &comp) -> void {
 }
 
 auto main() -> int {
-  // point_counter votes{{1, 3}, {2, 5}, {3, 1}, {4, 3},
-  //                     {5, 1}, {6, 7}, {7, 1}, {8, 4}};
-
-  // point_counter votes2{{1, 9}, {2, 5}, {3, 1}, {4, 3}, {5, 1},
-  //                      {6, 7}, {7, 1}, {8, 4}, {9, 10}};
-
-  // placing pl = placing_of_votes(votes);
-  // placing pl2 = placing_of_votes(votes2);
-
-  // cout << "placing 1:\n";
-  // for (size_t i = 0; i < pl.size(); i++) {
-  //   auto const song_id = pl[i];
-  //   std::cout << i + 1 << ". " << song_id << "\n";
-  // }
-
-  // cout << "\nplacing 2:\n";
-  // for (size_t i = 0; i < pl2.size(); i++) {
-  //   auto const song_id = pl2[i];
-  //   std::cout << i + 1 << ". " << song_id << "\n";
-  // }
-
-  // comparison c = comparison_of_placings(pl, pl2);
-
-  // cout << "\ncomparison: \n";
-  // for (size_t i = 0; i < c.size(); i++) {
-  //   auto const &[song_id, d_pos] = c[i];
-  //   std::cout << i + 1 << ". " << song_id << " " << d_pos << "\n";
-  // }
-
-  // cout << "\neliminated songs:\n";
-  // for (auto const& song_id : eliminated_of_placings(pl, pl2)) {
-  //   cout << song_id << "\n";
-  // }
-
   string line;
   size_t max_key = 0;
   size_t line_number = 0;
@@ -327,77 +256,73 @@ auto main() -> int {
     instruction_type lineType = instruction_type_of_line(line);
 
     switch (lineType) {
-    case instruction_type::max: {
-      auto const &[valid, new_max_key] = parse_max(max_key, line);
+      case instruction_type::max: {
+        auto const &[valid, new_max_key] = parse_max(max_key, line);
 
-      if (!valid) {
+        if (!valid) {
+          printLineError(line, line_number);
+          continue;
+        }
+
+        // zamykanie rundy
+        last_round_placing = move(current_round_placing);
+        current_round_placing = placing_of_votes(current_round_votes);
+
+        round_comparison =
+            comparison_of_placings(last_round_placing, current_round_placing);
+
+        // calculating top
+        top_placing_votes =
+            add_top_placing_votes(top_placing_votes, current_round_placing);
+
+        // szykowanie nowych głosów
+        auto eliminated_songs =
+            eliminated_of_placings(last_round_placing, current_round_placing);
+        current_round_votes =
+            extend_votes(current_round_votes, max_key, new_max_key);
+        current_round_votes =
+            filter_eliminated_songs(current_round_votes, eliminated_songs);
+        current_round_votes = clear_votes(current_round_votes);
+
+        max_key = new_max_key;
+
+        print_comparison(round_comparison);
+      } break;
+      case instruction_type::top: {
+        // nic do sprawdzania, bo regexp validuje.
+        last_top_placing = move(current_top_placing);
+        current_top_placing = placing_of_votes(top_placing_votes);
+
+        top_comparison =
+            comparison_of_placings(last_top_placing, current_top_placing);
+
+        print_comparison(top_comparison);
+
+      } break;
+      case instruction_type::vote: {
+        auto const &[valid, parsed_votes] =
+            parseVote(current_round_votes, max_key, line);
+
+        if (!valid) {
+          printLineError(line, line_number);
+          continue;
+        }
+
+        for (auto vote_song_id : parsed_votes) {
+          current_round_votes[vote_song_id] += 1;
+        }
+      } break;
+      case instruction_type::empty: {
+      } break;
+      case instruction_type::unknown: {
         printLineError(line, line_number);
         continue;
-      }
-
-      // zamykanie rundy
-      last_round_placing = move(current_round_placing);
-      current_round_placing = placing_of_votes(current_round_votes);
-
-      round_comparison =
-          comparison_of_placings(last_round_placing, current_round_placing);
-
-      // calculating top
-      last_top_placing = move(current_top_placing);
-      // dodawaj punkty za pozycję w placingu, nie running total
-      top_placing_votes =
-          add_top_placing_votes(top_placing_votes, current_round_placing);
-      current_top_placing = placing_of_votes(top_placing_votes);
-
-      top_comparison =
-          comparison_of_placings(last_top_placing, current_top_placing);
-
-      // szykowanie nowych głosów
-      auto eliminated_songs =
-          eliminated_of_placings(last_round_placing, current_round_placing);
-      current_round_votes =
-          extend_votes(current_round_votes, max_key, new_max_key);
-      current_round_votes =
-          filter_eliminated_songs(current_round_votes, eliminated_songs);
-      current_round_votes = clear_votes(current_round_votes);
-
-      max_key = new_max_key;
-
-      print_comparison(round_comparison);
-    } break;
-    case instruction_type::top: {
-      // nic do sprawdzania, bo regexp validuje.
-      print_comparison(top_comparison);
-
-    } break;
-    case instruction_type::vote: {
-      auto const &[valid, parsed_votes] =
-          parseVote(current_round_votes, max_key, line);
-
-      if (!valid) {
-        printLineError(line, line_number);
-        continue;
-      }
-
-      for (auto vote_song_id : parsed_votes) {
-        current_round_votes[vote_song_id] += 1;
-      }
-    } break;
-    case instruction_type::empty: {
-    } break;
-    case instruction_type::unknown: {
-      printLineError(line, line_number);
-      continue;
-    } break;
-    default: {
-      cerr << "Unknown instruction: " << line << "(" << lineType << ")\n";
-      return 1;
-    } break;
+      } break;
+      default: {
+        cerr << "Unknown instruction: " << line << "(" << lineType << ")\n";
+        return 1;
+      } break;
     }
-
-    // printf("max_key: %lu, instruction: %d, line: %s\n", max_key, lineType,
-    //        line.c_str());
-    // printStore(voteStores.second);
   }
 
   return 0;
