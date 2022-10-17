@@ -46,9 +46,9 @@ enum instruction_type { top = 1, max = 2, vote = 3, empty = 4, unknown = 0 };
 
 auto instruction_type_of_line(string &line) -> instruction_type {
   const static map<instruction_type, regex> cases{
-      {instruction_type::max, regex(R"(^NEW\s+\d+)")},
-      {instruction_type::top, regex(R"(^TOP$)")},
-      {instruction_type::vote, regex(R"(^([1-9]\d*\s*)+$)")},
+      {instruction_type::max, regex(R"(^\s*NEW\s+\d+\s*$)")},
+      {instruction_type::top, regex(R"(^\s*TOP\s*$)")},
+      {instruction_type::vote, regex(R"(^\s*(0*\d{1,9}\s+)*(0*\d{1,9})\s*$)")},
       {instruction_type::empty, regex(R"(^\s*$)")}};
 
   for (auto const &[instruction, re] : cases) {
@@ -75,7 +75,7 @@ auto parseVote(point_counter &currentVotes, size_t max_key, string &line)
         votes.contains(vote)) {
       valid = false;
       break;
-    }
+    } 
 
     votes.insert(vote);
   }
@@ -87,7 +87,7 @@ auto parse_max(uint64_t max_key, string &line) -> pair<bool, uint64_t> {
   stringstream lineStream(line);
   bool valid = true;
 
-  size_t new_max_key;
+  int64_t new_max_key;
 
   // ignore leading whitespaces
   while (isspace(lineStream.peek())) {
@@ -97,7 +97,7 @@ auto parse_max(uint64_t max_key, string &line) -> pair<bool, uint64_t> {
   // ignore "MAX "
   lineStream.ignore(((sizeof(char)) * 4), ' ');
 
-  valid = !!(lineStream >> new_max_key) && (new_max_key >= max_key);
+  valid = !!(lineStream >> new_max_key) && (new_max_key >= (int64_t)max_key) && (new_max_key <= 99999999) && (new_max_key >= 1);
 
   return {valid, new_max_key};
 }
