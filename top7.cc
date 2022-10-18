@@ -22,7 +22,7 @@ enum instruction_type { top = 1, max = 2, vote = 3, empty = 4, unknown = 0 };
 
 auto instruction_type_of_line(string &line) -> instruction_type {
   const static unordered_map<instruction_type, regex> cases{
-      {instruction_type::max, regex(R"(^\s*NEW\s+\d+\s*$)")},
+      {instruction_type::max, regex(R"(^\s*NEW\s+0*\d{1,9}\s*$)")},
       {instruction_type::top, regex(R"(^\s*TOP\s*$)")},
       {instruction_type::vote, regex(R"(^\s*(0*\d{1,9}\s+)*(0*\d{1,9})\s*$)")},
       {instruction_type::empty, regex(R"(^\s*$)")}};
