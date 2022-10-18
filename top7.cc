@@ -206,7 +206,7 @@ auto eliminated_from_top(placing &previous_top_placing,
 // add new songs to the next round's vote counter
 auto extend_votes(point_counter &current_round_votes, uint64_t old_max,
                   uint64_t new_max) -> point_counter & {
-  for (uint64_t song_id = old_max + 1; song_id <= new_max; song_id++) {
+  for (song_id_t song_id = old_max + 1; song_id <= new_max; song_id++) {
     current_round_votes[song_id] = 0;
   }
 
