@@ -1,48 +1,19 @@
 #include <iostream>
-#include <ostream>
-#include <ranges>
 #include <regex>
 #include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include <variant>
 #include <vector>
 
 using namespace std;
 
-using point_counter = unordered_map<uint64_t, uint64_t>;  // (1)
-using placing = vector<uint64_t>;                         // (2)
-using comparison = vector<pair<uint64_t, string>>;        // (3)
+using point_counter = unordered_map<uint64_t, uint64_t>;
+using placing = vector<uint64_t>;
+using comparison = vector<pair<uint64_t, string>>;
 
 enum instruction_type { top = 1, max = 2, vote = 3, empty = 4, unknown = 0 };
-
-/*
-  1. something to hold the votes in each round:
-    - quick song access
-    - votes ≥ 0
-    :: unordered_map<song_id, uint64_t>
-  2. something for rounding up each round:
-    - set order
-    - size ≤ 7
-    - constructable from (1)
-    - access time complexity doesn't matter,
-      since size ≤ 7, so O(n^2) = O(49) = O(1) is fine
-    :: vector<song_id> ?
-      - position = index + 1 & points = 7 - index
-  3. something to compare the round ups:
-    - set order, sortability would be nice
-    - printable
-    :: vector<pair<song_id, ~d_pos: string>>
-  4. something to store running points
-    >> wild guess:
-      za placement w podsumowaniu rundy dostajemy punkty.
-      te punkty są zliczane w (1). Z tego robimy identycznie
-      (2). Trzymamy poprzedni (2) i obecny (2) [tj. (2) z (1)
-      przed dodaniem i po dodaniu punktów z tej rundy _zakończonej_].
-      Na podstawie tego wylicza (3) do pokazania.
-*/
 
 auto instruction_type_of_line(string &line) -> instruction_type {
   const static map<instruction_type, regex> cases{
@@ -131,7 +102,7 @@ auto placing_of_votes(point_counter &votes) -> placing {
     } else {
       auto min_entry = *intermediate_placing.rbegin();
 
-      if (placing_cmp(entry, min_entry)) {  // entry > min_entry
+      if (placing_cmp(entry, min_entry)) { // entry > min_entry
         intermediate_placing.erase(min_entry);
         intermediate_placing.insert(entry);
       }
@@ -233,8 +204,8 @@ auto print_comparison(comparison &comp) -> void {
 
 auto main() -> int {
   string line;
-  size_t max_key = 0;
-  size_t line_number = 0;
+  uint64_t max_key = 0;
+  uint64_t line_number = 0;
 
   point_counter current_round_votes{};
   point_counter top_placing_votes{};
@@ -253,72 +224,72 @@ auto main() -> int {
     instruction_type lineType = instruction_type_of_line(line);
 
     switch (lineType) {
-      case instruction_type::max: {
-        auto const &[valid, new_max_key] = parse_max(max_key, line);
+    case instruction_type::max: {
+      auto const &[valid, new_max_key] = parse_max(max_key, line);
 
-        if (!valid) {
-          print_line_error(line, line_number);
-          continue;
-        }
-
-        // zamykanie rundy
-        last_round_placing = move(current_round_placing);
-        current_round_placing = placing_of_votes(current_round_votes);
-
-        round_comparison =
-            comparison_of_placings(last_round_placing, current_round_placing);
-
-        // addinng placement votes
-        top_placing_votes =
-            add_top_placing_votes(top_placing_votes, current_round_placing);
-
-        // szykowanie nowych głosów
-        auto eliminated_songs =
-            eliminated_of_placings(last_round_placing, current_round_placing);
-        current_round_votes =
-            extend_votes(current_round_votes, max_key, new_max_key);
-        current_round_votes =
-            filter_eliminated_songs(current_round_votes, eliminated_songs);
-        current_round_votes = clear_votes(current_round_votes);
-
-        max_key = new_max_key;
-
-        print_comparison(round_comparison);
-      } break;
-      case instruction_type::top: {
-        // nic do sprawdzania, bo regexp validuje.
-        last_top_placing = move(current_top_placing);
-        current_top_placing = placing_of_votes(top_placing_votes);
-
-        top_comparison =
-            comparison_of_placings(last_top_placing, current_top_placing);
-
-        print_comparison(top_comparison);
-
-      } break;
-      case instruction_type::vote: {
-        auto const &[valid, parsed_votes] =
-            parse_vote(current_round_votes, max_key, line);
-
-        if (!valid) {
-          print_line_error(line, line_number);
-          continue;
-        }
-
-        for (auto vote_song_id : parsed_votes) {
-          current_round_votes[vote_song_id] += 1;
-        }
-      } break;
-      case instruction_type::empty: {
-      } break;
-      case instruction_type::unknown: {
+      if (!valid) {
         print_line_error(line, line_number);
         continue;
-      } break;
-      default: {
-        cerr << "Unknown instruction: " << line << "(" << lineType << ")\n";
-        return 1;
-      } break;
+      }
+
+      // close the current round
+      last_round_placing = move(current_round_placing);
+      current_round_placing = placing_of_votes(current_round_votes);
+
+      round_comparison =
+          comparison_of_placings(last_round_placing, current_round_placing);
+
+      // add placement votes
+      top_placing_votes =
+          add_top_placing_votes(top_placing_votes, current_round_placing);
+
+      // prepare a new voting
+      auto eliminated_songs =
+          eliminated_of_placings(last_round_placing, current_round_placing);
+      current_round_votes =
+          extend_votes(current_round_votes, max_key, new_max_key);
+      current_round_votes =
+          filter_eliminated_songs(current_round_votes, eliminated_songs);
+      current_round_votes = clear_votes(current_round_votes);
+
+      max_key = new_max_key;
+
+      print_comparison(round_comparison);
+    } break;
+    case instruction_type::top: {
+      // nothing to check, regex validates the whole line
+      last_top_placing = move(current_top_placing);
+      current_top_placing = placing_of_votes(top_placing_votes);
+
+      top_comparison =
+          comparison_of_placings(last_top_placing, current_top_placing);
+
+      print_comparison(top_comparison);
+
+    } break;
+    case instruction_type::vote: {
+      auto const &[valid, parsed_votes] =
+          parse_vote(current_round_votes, max_key, line);
+
+      if (!valid) {
+        print_line_error(line, line_number);
+        continue;
+      }
+
+      for (auto vote_song_id : parsed_votes) {
+        current_round_votes[vote_song_id] += 1;
+      }
+    } break;
+    case instruction_type::empty: {
+    } break;
+    case instruction_type::unknown: {
+      print_line_error(line, line_number);
+      continue;
+    } break;
+    default: {
+      cerr << "Unknown instruction: " << line << "(" << lineType << ")\n";
+      return 1;
+    } break;
     }
   }
 
